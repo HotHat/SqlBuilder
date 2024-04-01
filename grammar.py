@@ -1,6 +1,7 @@
+import math
 from inspect import isfunction
 import re
-from .builder import Expression, JoinClause, Builder
+from builder import Expression, JoinClause, Builder
 
 
 class Grammar:
@@ -195,7 +196,118 @@ class Grammar:
         return 'exists (' + self.compile_select(where['query']) + ')'
 
     def _compile_groups(self, query, groups):
-        pass
+        return 'group by ' + self.columnize(groups)
+
+    def compile_having(self, query, havings):
+        def mf(having):
+            if having['type'] == 'Raw':
+                return having['boolean'] + ' ' + having['sql']
+            return self._compile_base_having(having)
+        sql = ' '.join(map(mf, havings))
+        return 'having ' + self.remove_leading_boolean(sql)
+
+    def _compile_base_having(self, having):
+        column = self.wrap(having['column'])
+        parameter = self.parameter(having['value'])
+        return having['boolean'] + ' ' + column + ' ' + having['operator'] + ' ' + parameter
+
+    def _compile_orders(self, query, orders):
+        def mf(order):
+            if 'sql' in order:
+                return order['sql']
+            else:
+                return self.wrap(order['column']) + ' ' + order['direction']
+
+        if len(orders) > 0:
+            return 'order by' + ', '.join(map(mf, orders))
+
+        return ''
+
+    # def _compile_random(self, seed):
+    #     return 'RANDOM()'
+
+    def _compile_limit(self, query, limit):
+        return 'limit ' + str(int(limit))
+
+    def _compile_offset(self, query, offset):
+        return 'offset ' + str(int(offset))
+
+    def _compile_unions(self, query: Builder, unions):
+        def compile_union(union):
+            conj = ' union all ' if union['all'] else ' union '
+            return conj + union['query'].to_sql()
+
+        sql = ''
+        for union in unions:
+            sql += compile_union(union)
+
+        sql += ' ' + self._compile_orders(query, query.union_orders)
+
+        if query.union_limit:
+            sql += ' ' + self._compile_limit(query, query.union_limit)
+
+        if query.union_offset:
+            sql += ' ' + self._compile_offset(query, query.union_offset)
+
+        return sql.lstrip()
+
+    def _compile_exists(self, query, _):
+        select = self.compile_select(query)
+        return 'select exists({}) as {}'.format(select, self.wrap('exists'))
+
+    def _compile_insert(self, query, values):
+        table = self.wrap_table(query.from_)
+        if type(values) != list:
+            values = [values]
+        columns = self.columnize(values)
+        parameters = ', '.join(map(lambda record: '(' + self.parameterize(record)+')', values))
+
+        return f'insert into {table} ({columns}) values {parameters}'
+
+    def _compile_insert_get_id(self, query, values):
+        return self._compile_insert(query, values)
+
+    def compile_update(self, query: Builder, values):
+        table = self.wrap_table(query.from_)
+        columns = ', '.join(map(lambda p: self.wrap(p[0]) + ' = ' + self.parameter(p[1])+')', enumerate(values)))
+
+        joins = ''
+        if query.joins_:
+            joins = ' ' + self._compile_joins(query, query.joins_)
+
+        wheres = self._compile_wheres(query)
+
+        return f'update {table}{joins} set {columns} {wheres}'
+
+    def flatten(self, lst, depth=math.inf):
+        result = []
+        for it in lst:
+            if type(it) != list:
+                result.append(it)
+            elif depth == 1:
+                result += it
+            else:
+                result += self.flatten(it, depth-1)
+        return result
+
+    def prepare_bindings_for_update(self, bindings, values):
+        clean = bindings
+        del clean['join']
+        del clean['select']
+        return bindings['join'] + values + self.flatten(clean)
+
+    def _compile_delete(self, query: Builder, wheres):
+        sql = self._compile_wheres(query, wheres) if type(wheres) == list else ''
+        return 'delete from ' + self.wrap_table(query.from_) + ' ' + sql.strip()
+
+    @staticmethod
+    def prepare_binding_for_delete(self, bindings):
+        return self.flatten(bindings)
+
+    def _complie_lock(self, query, value):
+        return value if type(value) == str else ''
+
+
 
 
 
