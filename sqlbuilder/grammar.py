@@ -236,13 +236,9 @@ class Grammar:
         return 'offset ' + str(int(offset))
 
     def _compile_unions(self, query: Builder, unions):
-        def compile_union(union):
-            conj = ' union all ' if union['all'] else ' union '
-            return conj + union['query'].to_sql()
-
         sql = ''
         for union in unions:
-            sql += compile_union(union)
+            sql += self._compile_union(union)
 
         sql += ' ' + self._compile_orders(query, query.union_orders)
 
@@ -253,6 +249,10 @@ class Grammar:
             sql += ' ' + self._compile_offset(query, query.union_offset)
 
         return sql.lstrip()
+
+    def _compile_union(self, union):
+        conj = ' union all ' if union['all'] else ' union '
+        return conj + union['query'].to_sql()
 
     def _compile_exists(self, query, _):
         select = self.compile_select(query)
@@ -295,8 +295,8 @@ class Grammar:
 
     def prepare_bindings_for_update(self, bindings, values):
         clean = bindings
-        del clean['join']
-        del clean['select']
+        clean['join'] = []
+        clean['select'] = []
         return bindings['join'] + values + self.flatten(clean)
 
     def _compile_delete(self, query: Builder, wheres):
@@ -307,7 +307,7 @@ class Grammar:
     def prepare_binding_for_delete(self, bindings):
         return self.flatten(bindings)
 
-    def _complie_lock(self, query, value):
+    def _compile_lock(self, query, value):
         return value if type(value) == str else ''
 
 
