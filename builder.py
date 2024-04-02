@@ -1,4 +1,6 @@
 from inspect import isfunction
+import copy
+
 
 class InvalidArgumentException(Exception):
     pass
@@ -28,6 +30,7 @@ class Builder:
     def __init__(self, connection, grammar):
         self.connection = connection
         self.grammar = grammar
+        self.aggregate_ = {}
         self.columns_ = []
         self.bindings = {
             'select': [],
@@ -61,7 +64,7 @@ class Builder:
         return Builder(self.connection, self.grammar)
 
     def select(self, *columns):
-        self.columns_ = columns
+        self.columns_ = list(columns)
         return self
 
     def select_raw(self, expression, bindings=None):
@@ -503,6 +506,44 @@ class Builder:
         columns = ['*'] if len(columns) == 0 else columns
         return self.where('id', '=', qid).first(columns)
 
+    def count(self, columns='*'):
+        return self.aggregate('count', columns if type(columns) == list else [columns])
+
+    def min(self, columns):
+        return self.aggregate('min', [columns])
+
+    def max(self, columns):
+        return self.aggregate('max', [columns])
+
+    def sum(self, columns):
+        result = self.aggregate('sum', [columns])
+        return result if result else 0
+
+    def avg(self, columns):
+        return self.aggregate('avg', [columns])
+
+    def aggregate(self, fn, columns):
+        columns = columns if columns else ['*']
+        clone = copy.copy(self)
+        clone.columns_ = []
+        clone.bindings['select'] = []
+        clone.set_aggregate(fn, columns)
+        results = clone.get(columns)
+        if results:
+            return results[0]['aggregate']
+
+        return None
+
+    def set_aggregate(self, fn, columns):
+        self.aggregate_ = {
+            'function': fn,
+            'columns': columns
+        }
+        if self.groups_:
+            self.orders_ = []
+            self.bindings['order'] = []
+        return self
+
     def get(self, columns):
         columns = ['*'] if len(columns) == 0 else columns
         original = self.columns_
@@ -520,6 +561,7 @@ class Builder:
             'sql': sql,
             'bindings': bindings
         })
+        return self.connection.select(sql, bindings)
 
 
 class JoinClause(Builder):

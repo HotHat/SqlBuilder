@@ -8,9 +8,9 @@ class Grammar:
     def __init__(self, prefix):
         self.prefix = prefix
         self.operators = []
-        self.select_components = ['aggregate',
+        self.select_components = ['aggregate_',
                                   'columns_',
-                                  'from',
+                                  'from_',
                                   'joins_',
                                   'wheres_',
                                   'groups_',
@@ -89,22 +89,24 @@ class Grammar:
         for component in self.select_components:
             if hasattr(query, component):
                 q_c = getattr(query, component)
-                method = '_compile_' + component.lower().strip('_')
-                fn = getattr(self, method)
-                sql[component] = fn(query, q_c)
+                # not None, [], {}
+                if q_c:
+                    method = '_compile_' + component.lower().strip('_')
+                    fn = getattr(self, method)
+                    sql[component] = fn(query, q_c)
 
         return sql
 
     @staticmethod
     def concatenate(segments):
-        return ' '.join(filter(lambda x: x != '', segments))
+        return ' '.join(filter(lambda x: x != '', segments.values()))
 
     @staticmethod
     def remove_leading_boolean(value):
         return re.sub(r'and |or ', '', value, flags=re.IGNORECASE)
 
     def _compile_aggregate(self, query: Builder, aggregate):
-        column = self.columnize(aggregate['columns_'])
+        column = self.columnize(aggregate['columns'])
 
         if query.distinct_ and column != '*':
             column = 'distinct ' + column
@@ -117,8 +119,8 @@ class Grammar:
         select = 'select distinct ' if query.distinct_ else 'select '
         return select + self.columnize(columns)
 
-    def _compile_table(self, query, table):
-        return 'from' + self.wrap_table(table)
+    def _compile_from(self, query, table):
+        return 'from ' + self.wrap_table(table)
 
     def _compile_joins(self, query, joins):
         def mp(join):
@@ -138,7 +140,8 @@ class Grammar:
 
     def _compile_wheres_to_array(self, query):
         def mf(where):
-            fn = getattr(self, '_' + where['type']).lower()
+            attr = '_where_' + where['type'].lower()
+            fn = getattr(self, attr)
             return where['boolean'] + ' ' + fn(query, where)
         return list(map(mf, query.wheres_))
 
@@ -306,11 +309,6 @@ class Grammar:
 
     def _complie_lock(self, query, value):
         return value if type(value) == str else ''
-
-
-
-
-
 
 
 
