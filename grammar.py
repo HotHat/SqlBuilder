@@ -1,7 +1,7 @@
 import math
 from inspect import isfunction
 import re
-from builder import Expression, JoinClause, Builder
+from .builder import Expression, JoinClause, Builder
 
 
 class Grammar:

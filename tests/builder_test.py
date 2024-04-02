@@ -1,6 +1,10 @@
 import unittest
-import sys
-from grammar import Grammar, Builder
+import sys, os
+from os import path
+top = path.abspath(path.join(path.dirname(__file__), '../../'))
+sys.path.append(top)
+
+from sqlbuilder.grammar import Grammar, Builder
 
 
 class BuilderTest(unittest.TestCase):
