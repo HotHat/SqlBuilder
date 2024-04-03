@@ -1,35 +1,42 @@
 import unittest
-import mysql.connector
+from sqlbuilder.driver import MySqlDriver
 
 
 class ConnectionTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.connection = None
-
-    def test_start(self):
-        # Connect to server
-        cnx = mysql.connector.connect(
+        self.conn = MySqlDriver(
             host="127.0.0.1",
             port=3306,
             user="root",
             password="123456",
-            database='xapp'
-        )
+            database='xapp')
 
-        # Get a cursor
-        cur = cnx.cursor(dictionary=True)
+    def test_statement(self):
+        # insert
+        self.conn.statement("insert into user (username, password) values (%s, %s)", ['test1', '123456'])
+        last_id = self.conn.last_rowid()
+        print('insert row id:', last_id)
 
-        # Execute a query
-        cur.execute("select * from user")
+        # update
+        cnt = self.conn.statement("update `user` set username=%s where id=%s", ['test_update', last_id])
+        print(cnt)
+        # delete
+        print('delete row id:', self.conn.last_rowid())
+        cnt = self.conn.statement("delete from `user` where id=%s", [last_id])
+        print(cnt)
+        self.conn.commit()
 
-        # Fetch one result
-        rows = cur.fetchall()
-        print(rows)
-        # for row in rows:
-        #     print(dict(zip(cur.column_names, row)))
+    def test_fetch_one(self):
+        data = self.conn.fetch_one("select * from `user` where id=%s", [1])
+        print(data)
 
-        # Close connection
-        cnx.close()
+    def test_fetch_all(self):
+        data = self.conn.fetch_all("select * from `user`")
+        print(data)
         pass
 
+    def test_last_lowid(self):
+        pass
 
+    def test_transaction(self):
+        pass

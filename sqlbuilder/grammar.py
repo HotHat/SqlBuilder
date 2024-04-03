@@ -71,7 +71,7 @@ class Grammar:
         return ', '.join(map(lambda x: self.parameter(x), values))
 
     def parameter(self, value):
-        return value.get_value() if self.is_expression(value) else '?'
+        return value.get_value() if self.is_expression(value) else self.parameter_chars()
 
     def compile_select(self, query: Builder):
         original = query.columns_
@@ -182,7 +182,11 @@ class Grammar:
 
     def _where_between(self, query, where):
         between = 'not between' if where['not'] else 'between'
-        return self.wrap(where['column']) + between + ' ? and ?'
+        return self.wrap(where['column']) + between + ' {} and {}'.format(self.parameter_chars(), self.parameter_chars())
+
+    @staticmethod
+    def parameter_chars():
+        return '?'
 
     def _where_column(self, query, where):
         return self.wrap(where['first']) + where['operator'] + ' ' + self.wrap(where['second'])

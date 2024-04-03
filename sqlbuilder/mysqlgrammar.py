@@ -113,3 +113,7 @@ class MysqlGrammar(Grammar):
     @staticmethod
     def is_json_selector(value):
         return value.find('->') != -1
+
+    @staticmethod
+    def parameter_chars():
+        return '%s'
