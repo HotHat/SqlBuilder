@@ -103,7 +103,7 @@ class Grammar:
 
     @staticmethod
     def remove_leading_boolean(value):
-        return re.sub(r'and |or ', '', value, flags=re.IGNORECASE)
+        return re.sub(r'and |or ', '', value, 1, flags=re.IGNORECASE)
 
     def _compile_aggregate(self, query: Builder, aggregate):
         column = self.columnize(aggregate['columns'])
@@ -193,7 +193,7 @@ class Grammar:
 
     def _where_nested(self, query, where):
         offset = 3 if isinstance(query, JoinClause) else 6
-        return '(' + self._compile_wheres(where['query'])[offset:] + ')'
+        return '(' + self._compile_wheres(where['query'], None)[offset:] + ')'
 
     def _where_sub(self, query, where):
         select = self.compile_select(where['query'])

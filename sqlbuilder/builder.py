@@ -165,12 +165,13 @@ class Builder:
         def fn(query):
             query_fn = getattr(query, method)
             if type(column) == list:
-                query_fn(*column)
+                for col in column:
+                    query_fn(*col)
             else:
                 for key, value in column.items():
                     query_fn(key, '=', value, boolean)
 
-        self.where_nested(fn, boolean)
+        return self.where_nested(fn, boolean)
 
     @staticmethod
     def invalid_operator_and_value(operator, value) -> bool:
