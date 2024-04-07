@@ -12,6 +12,8 @@ class Connection:
     def __init__(self, driver: DriverBase, table_prefix=''):
         self.driver = driver
         self.table_prefix = table_prefix
+        self.enable_query_log_ = False
+        self.log_stock = []
 
     def table(self, table):
         return self.new_query().table(table)
@@ -55,8 +57,15 @@ class Connection:
     def elapsed_time(start):
         return round(time.time() * 1000) - start
 
+    def enable_query_log(self):
+        self.enable_query_log_ = True
+
     def log_query(self, query, bindings, elapsed_time):
-        pass
+        if self.enable_query_log_:
+            self.log_stock.append({'query': query, 'bindings': bindings, 'time': elapsed_time})
+
+    def get_query_log(self):
+        return self.log_stock
 
     def run(self, query, bindings, fn):
         start = round(time.time() * 1000)
