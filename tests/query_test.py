@@ -5,7 +5,7 @@ from sqlbuilder.mysqlconnection import MysqlConnection
 
 class QueryTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.conn = MysqlConnection(host="127.0.0.1",
+        self.conn = MysqlConnection('', host="127.0.0.1",
                                     port=3306,
                                     user="root",
                                     password="123456",
@@ -13,10 +13,9 @@ class QueryTest(unittest.TestCase):
 
     def test_where1(self):
         sql = (self.conn.table('users').select('id', 'name')
-               .table('user')
-               .where('id', 3)
+               .where('id', 2)
                .where('name', 'admin')
-               .or_where('id', 4)
+               .or_where('id', 1)
                .get()
                )
         print(sql)
@@ -128,24 +127,28 @@ class QueryTest(unittest.TestCase):
         print(sql)
 
     def test_insert(self):
-        (self.conn
+        nid = (self.conn
             .table('users')
             .insert([
-                {'email': 'hothat@example.com', 'votes': 0},
-                {'email': 'hothat2@example.com', 'votes': 0},
+                {'email': 'hothat@example.com', 'votes': 100, 'name': 'Test1'},
+                {'email': 'hothat2@example.com', 'votes': 0, 'name': 'Test2'},
             ])
         )
+        self.conn.commit()
+        print(nid)
 
     def test_insert2(self):
         (self.conn
          .table('users')
-         .insert({'email': 'hothat@example.com', 'votes': 0}))
+         .insert({'email': 'hothat@example.com', 'votes': 0, 'name': 'hothat'}))
+        self.conn.commit()
 
     def test_update(self):
         (self.conn
          .table('users')
          .where('id', 1)
          .update({'votes': 1}))
+        self.conn.commit()
         pass
 
     def test_delete(self):
@@ -158,3 +161,4 @@ class QueryTest(unittest.TestCase):
          .table('users')
          .where('votes', '>', 100)
          .delete())
+        self.conn.commit()

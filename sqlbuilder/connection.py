@@ -77,3 +77,12 @@ class Connection:
         self.log_query(query, bindings, self.elapsed_time(start))
 
         return result
+
+    def commit(self):
+        return self.driver.commit()
+
+    def rollback(self):
+        return self.driver.rollback()
+
+    def start_transaction(self):
+        return self.driver.start_transaction()

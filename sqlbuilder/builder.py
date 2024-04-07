@@ -515,7 +515,7 @@ class Builder:
         return self.union(query, True)
 
     def to_sql(self):
-        return self.grammar.compile_select(self), self.get_bindings()
+        return self.grammar.compile_select(self)
 
     def first(self, columns=None):
         columns = ['*'] if columns is None else columns
@@ -572,8 +572,9 @@ class Builder:
 
         return ret if ret else self
 
-    def get(self, columns):
-        columns = ['*'] if len(columns) == 0 else columns
+    def get(self, columns=None):
+        if columns is None:
+            columns = ['*']
         original = self.columns_
         if not original:
             self.columns_ = columns
