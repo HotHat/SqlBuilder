@@ -1,5 +1,23 @@
 from inspect import isfunction
 import copy
+import math
+
+
+def flatten(lst, depth=math.inf):
+    result = []
+    if type(lst) == list:
+        tmp = enumerate(lst)
+    else:
+        tmp = lst.items()
+    for p in tmp:
+        v = p[1]
+        if type(v) != dict and type(v) != list:
+            result.append(v)
+        elif depth == 1:
+            result.append(v)
+        else:
+            result += flatten(v, depth-1)
+    return result
 
 
 class InvalidArgumentException(Exception):
@@ -11,7 +29,7 @@ class Expression:
         self.value = value
 
     def get_value(self):
-        return self.value
+        return str(self.value)
 
     def __str__(self):
         return str(self.value)
@@ -102,7 +120,7 @@ class Builder:
         return self
 
     def get_bindings(self):
-        return self.bindings
+        return flatten(self.bindings)
 
     def join(self, table, first, operator=True, second=None, jtype='inner', where=False):
         join_clause = JoinClause(self, jtype, table)
@@ -206,7 +224,7 @@ class Builder:
 
     def where_null(self, column, boolean='and', not_null=False):
         self.wheres_.append({
-            'type': 'NotNull' if not_null else 'Null',
+            'type': 'Not_Null' if not_null else 'Null',
             'column': column,
             'boolean': boolean
         })
@@ -265,7 +283,7 @@ class Builder:
         :return:
         """
         if type(first) == list or type(first) == dict:
-            return self.add_dict_wheres(first, boolean, 'whereColumn')
+            return self.add_dict_wheres(first, boolean, 'where_column')
 
         if self.invalid_operator(operator):
             second, operator = operator, '='
@@ -289,7 +307,7 @@ class Builder:
         """
         return self.where_column(first, operator, second, 'or')
 
-    def where_raw(self, sql, bindings, boolean='and'):
+    def where_raw(self, sql, bindings=None, boolean='and'):
         bindings = bindings if bindings else []
         self.wheres_.append({
             'type': 'raw',
@@ -301,7 +319,7 @@ class Builder:
 
     def where_in_existing_query(self, column, query, boolean, not_in):
         self.wheres_.append({
-            'type': 'NotInSub' if not_in else 'InSub',
+            'type': 'Not_In_Sub' if not_in else 'In_Sub',
             'column': column,
             'query': query,
             'boolean': boolean
@@ -312,7 +330,7 @@ class Builder:
     def where_in_sub(self, column, callback, boolean, not_in):
         query = self.for_sub_query()
         self.wheres_.append({
-            'type': 'NotInSub' if not_in else 'InSub',
+            'type': 'NotInSub' if not_in else 'In_Sub',
             'column': column,
             'query': query,
             'boolean': boolean
@@ -331,7 +349,7 @@ class Builder:
             return self.where_in_sub(column, values, boolean, not_in)
 
         self.wheres_.append({
-            'type': 'NotIn' if not_in else 'In',
+            'type': 'Not_In' if not_in else 'In',
             'column': column,
             'values': values,
             'boolean': boolean
@@ -497,10 +515,10 @@ class Builder:
         return self.union(query, True)
 
     def to_sql(self):
-        return self.grammar.compile_select(self)
+        return self.grammar.compile_select(self), self.get_bindings()
 
-    def first(self, columns):
-        columns = ['*'] if len(columns) == 0 else columns
+    def first(self, columns=None):
+        columns = ['*'] if columns is None else columns
         return self.take(1).get(columns)
 
     def find(self, qid, columns):
@@ -545,6 +563,15 @@ class Builder:
             self.bindings['order'] = []
         return self
 
+    def when(self, value, callback, default=None):
+        ret = None
+        if value:
+            ret = callback(self, value)
+        elif default:
+            ret = default(self, value)
+
+        return ret if ret else self
+
     def get(self, columns):
         columns = ['*'] if len(columns) == 0 else columns
         original = self.columns_
@@ -563,6 +590,45 @@ class Builder:
             'bindings': bindings
         })
         return self.connection.select(sql, bindings)
+
+    @staticmethod
+    def _clean_bindings(bindings):
+        return list(filter(lambda x: not isinstance(x, Expression), bindings))
+
+    def exists(self):
+        results = self.connection.select(self.grammar.compile_exists(self), self.bindings)
+        if results:
+            return bool(results[0]['exists'])
+        return False
+
+    def insert(self, values):
+        if not values:
+            return True
+        target = []
+        if type(values) == dict:
+            target.append(values)
+        elif type(values) == list:
+            for it in values:
+                if type(it) != dict:
+                    raise InvalidArgumentException(it, 'must be dict')
+                target.append(dict(sorted(it.items())))
+        return self.connection.insert(self.grammar.compile_insert(self, target), self._clean_bindings(flatten(target)))
+
+    def update(self, values):
+        sql = self.grammar.compile_update(self, values)
+        return self.connection.update(sql, self.grammar.prepare_bindings_for_update(self.bindings, values))
+
+    def update_or_insert(self, attributes, values):
+        if not self.where(attributes).exists():
+            return self.insert({**attributes, **values})
+        return self.take(1).update(values)
+
+    def delete(self, primary_key=''):
+        if primary_key:
+            self.where(self.from_ + '.id', '=', primary_key)
+
+        return self.connection.delete(self.grammar.compile_delete(self),
+                                      self._clean_bindings(self.grammar.prepare_binding_for_delete(self.bindings)))
 
 
 class JoinClause(Builder):

@@ -1,7 +1,7 @@
 import math
 from inspect import isfunction
 import re
-from .builder import Expression, JoinClause, Builder
+from .builder import Expression, JoinClause, Builder, flatten
 
 
 class Grammar:
@@ -205,7 +205,7 @@ class Grammar:
     def _compile_groups(self, query, groups):
         return 'group by ' + self.columnize(groups)
 
-    def compile_having(self, query, havings):
+    def _compile_having(self, query, havings):
         def mf(having):
             if having['type'] == 'Raw':
                 return having['boolean'] + ' ' + having['sql']
@@ -226,7 +226,7 @@ class Grammar:
                 return self.wrap(order['column']) + ' ' + order['direction']
 
         if len(orders) > 0:
-            return 'order by' + ', '.join(map(mf, orders))
+            return 'order by ' + ', '.join(map(mf, orders))
 
         return ''
 
@@ -258,21 +258,21 @@ class Grammar:
         conj = ' union all ' if union['all'] else ' union '
         return conj + union['query'].to_sql()
 
-    def _compile_exists(self, query, _):
+    def compile_exists(self, query):
         select = self.compile_select(query)
         return 'select exists({}) as {}'.format(select, self.wrap('exists'))
 
-    def _compile_insert(self, query, values):
+    def compile_insert(self, query, values):
         table = self.wrap_table(query.from_)
         if type(values) != list:
             values = [values]
-        columns = self.columnize(values)
+        columns = self.columnize(values[0].keys())
         parameters = ', '.join(map(lambda record: '(' + self.parameterize(record)+')', values))
 
         return f'insert into {table} ({columns}) values {parameters}'
 
-    def _compile_insert_get_id(self, query, values):
-        return self._compile_insert(query, values)
+    def compile_insert_get_id(self, query, values):
+        return self.compile_insert(query, values)
 
     def compile_update(self, query: Builder, values):
         table = self.wrap_table(query.from_)
@@ -286,30 +286,19 @@ class Grammar:
 
         return f'update {table}{joins} set {columns} {wheres}'
 
-    def flatten(self, lst, depth=math.inf):
-        result = []
-        for it in lst:
-            if type(it) != list:
-                result.append(it)
-            elif depth == 1:
-                result += it
-            else:
-                result += self.flatten(it, depth-1)
-        return result
-
     def prepare_bindings_for_update(self, bindings, values):
         clean = bindings
         clean['join'] = []
         clean['select'] = []
-        return bindings['join'] + values + self.flatten(clean)
+        return bindings['join'] + list(values.values()) + flatten(clean)
 
-    def _compile_delete(self, query: Builder, wheres):
-        sql = self._compile_wheres(query, wheres) if type(wheres) == list else ''
+    def compile_delete(self, query: Builder):
+        sql = self._compile_wheres(query, query.wheres_) if type(query.wheres_) == list else ''
         return 'delete from ' + self.wrap_table(query.from_) + ' ' + sql.strip()
 
     @staticmethod
     def prepare_binding_for_delete(self, bindings):
-        return self.flatten(bindings)
+        return flatten(bindings)
 
     def _compile_lock(self, query, value):
         return value if type(value) == str else ''

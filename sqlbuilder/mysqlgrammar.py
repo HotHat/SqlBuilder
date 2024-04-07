@@ -1,4 +1,4 @@
-from .grammar import Grammar, Builder
+from .grammar import Grammar, Builder, flatten
 
 
 class MysqlGrammar(Grammar):
@@ -38,7 +38,7 @@ class MysqlGrammar(Grammar):
         def mf(v):
             return self.wrap(v[0]) + ' = ' + self.parameter(v[1])
 
-        return ', '.join(map(mf, values))
+        return ', '.join(map(mf, values.items()))
 
     def compile_update(self, query: Builder, values):
         table = self.wrap_table(query.from_)
@@ -62,7 +62,7 @@ class MysqlGrammar(Grammar):
         # def fn(v):
         #     return MysqlGrammar.is_json_selector()
         # values = list(filter(fn, values))
-        super().prepare_bindings_for_update(bindings, values)
+        return super().prepare_bindings_for_update(bindings, values)
 
     def _compile_delete_with_joins(self, query, table, where):
         joins = ' ' + self._compile_joins(query, query.joins_)
@@ -80,7 +80,7 @@ class MysqlGrammar(Grammar):
 
         return sql
 
-    def _compile_delete(self, query: Builder, wheres):
+    def compile_delete(self, query: Builder):
         table = self.wrap_table(query.from_)
         where = self._compile_wheres(query, query.wheres_) if query.wheres_ else ''
 
@@ -91,7 +91,7 @@ class MysqlGrammar(Grammar):
         clean = bindings
         clean['join'] = []
         clean['select'] = []
-        return bindings['join'] + self.flatten(clean)
+        return bindings['join'] + flatten(clean)
 
     @staticmethod
     def wrap_value(value):
