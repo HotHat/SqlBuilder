@@ -9,7 +9,7 @@ class BuilderTest(unittest.TestCase):
     def setUp(self) -> None:
         self.builder = Builder(None, Grammar('tb_'))
         self.connection = Connection(None, '')
-        self.mysql_builder = Builder(self.connection, MysqlGrammar('tb_'))
+        self.mysql_builder = Builder(self.connection, MysqlGrammar(''))
 
     def test_hello(self):
         sql = self.builder.select('id', 'name').table('user').where('id', 3).to_sql()
@@ -166,3 +166,14 @@ class BuilderTest(unittest.TestCase):
          .table('users')
          .where('votes', '>', 100)
          .delete())
+
+    def test_join(self):
+        sql = (self.mysql_builder
+               .table('users')
+               .select('users.id AS uid', 'roles.permission_id')
+               .join('user_roles', 'user_roles.user_id', '=', 'users.id')
+               .left_join('roles', 'roles.id', '=', 'user_roles.role_id')
+               .to_sql()
+               )
+
+        print(sql)

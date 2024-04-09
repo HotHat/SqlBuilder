@@ -21,6 +21,12 @@ class Connection:
     def get_grammar(self):
         return Grammar(self.table_prefix)
 
+    def statement(self, query, bindings):
+        def fn(sql, binder):
+            return self.driver.statement(sql, binder)
+
+        return self.run(query, bindings, fn)
+
     def new_query(self):
         return Builder(self, self.get_grammar())
 

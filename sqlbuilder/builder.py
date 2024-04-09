@@ -134,6 +134,7 @@ class Builder:
             fn = getattr(join_clause, method)
             self.joins_.append(fn(first, operator, second))
             self.add_binding(join_clause.get_bindings(), 'join')
+        return self
 
     def join_where(self, table, first, operator, second, jtype='inner'):
         return self.join(table, first, operator, second, jtype, True)

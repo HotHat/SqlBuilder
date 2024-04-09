@@ -125,7 +125,7 @@ class Grammar:
     def _compile_joins(self, query, joins):
         def mp(join):
             table = self.wrap_table(join.table)
-            return "{} join {} {}".format(join.type, table, self._compile_wheres(join))
+            return "{} join {} {}".format(join.type, table, self._compile_wheres(join, None)).lstrip()
         return ' '.join(map(mp, joins)).strip()
 
     def _compile_wheres(self, query, wheres):
@@ -189,7 +189,7 @@ class Grammar:
         return '?'
 
     def _where_column(self, query, where):
-        return self.wrap(where['first']) + where['operator'] + ' ' + self.wrap(where['second'])
+        return self.wrap(where['first']) + where['operator'] + self.wrap(where['second'])
 
     def _where_nested(self, query, where):
         offset = 3 if isinstance(query, JoinClause) else 6
