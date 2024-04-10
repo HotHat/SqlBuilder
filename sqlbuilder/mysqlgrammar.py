@@ -40,6 +40,11 @@ class MysqlGrammar(Grammar):
 
         return ', '.join(map(mf, values.items()))
 
+    def compile_insert_or_ignore(self, query, values):
+        sql = self.compile_insert(query, values)
+        sql.replace('insert', 'insert ignore', 1)
+        return sql
+
     def compile_update(self, query: Builder, values):
         table = self.wrap_table(query.from_)
         columns = self._compile_update_columns(values)

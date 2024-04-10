@@ -70,3 +70,7 @@ class MySqlDriver(DriverBase):
 
     def start_transaction(self):
         self.start_transaction()
+
+
+class PostgresDriver(DriverBase):
+    pass

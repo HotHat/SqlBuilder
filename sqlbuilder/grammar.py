@@ -271,7 +271,10 @@ class Grammar:
 
         return f'insert into {table} ({columns}) values {parameters}'
 
-    def compile_insert_get_id(self, query, values):
+    def compile_insert_or_ignore(self, query, values):
+        pass
+
+    def compile_insert_get_id(self, query, values, sequence):
         return self.compile_insert(query, values)
 
     def compile_update(self, query: Builder, values):

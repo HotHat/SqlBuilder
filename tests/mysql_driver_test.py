@@ -2,7 +2,7 @@ import unittest
 from sqlbuilder.driver import MySqlDriver
 
 
-class ConnectionTest(unittest.TestCase):
+class MysqlDriverTest(unittest.TestCase):
     def setUp(self) -> None:
         self.conn = MySqlDriver(
             host="127.0.0.1",

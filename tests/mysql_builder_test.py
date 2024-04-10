@@ -7,13 +7,9 @@ from sqlbuilder.driver import MySqlDriver
 
 class BuilderTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.builder = Builder(None, Grammar('tb_'))
+        # self.builder = Builder(None, Grammar('tb_'))
         self.connection = Connection(None, '')
         self.mysql_builder = Builder(self.connection, MysqlGrammar(''))
-
-    def test_hello(self):
-        sql = self.builder.select('id', 'name').table('user').where('id', 3).to_sql()
-        print(sql)
 
     def test_hello2(self):
         sql = self.mysql_builder.select('id', 'name').table('user').where('id', 3).to_sql()
@@ -78,6 +74,17 @@ class BuilderTest(unittest.TestCase):
                # where_null / where_not_null
                .where_null('updated_at')
                .where_not_null('created_at')
+               .to_sql()
+               )
+        print(sql)
+
+    def test_where_in2(self):
+        nb = Builder(self.connection, MysqlGrammar(''))
+        ids = nb.table('users').select('id')
+        sql = (self.mysql_builder
+               .table('users')
+               # where_in / where_not_in
+               .where_in('id', ids)
                .to_sql()
                )
         print(sql)

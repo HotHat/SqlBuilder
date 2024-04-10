@@ -1,9 +1,13 @@
 [build-system]
 requires = ["setuptools"]
+requires-python = ">=3.7"
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "sqlbuilder"
 version = "0.0.1"
 dependencies = [
+    'mysql-connection-python >= 8.3.0',
+    'pyscopg >= 3.1.18',
+
 ]
