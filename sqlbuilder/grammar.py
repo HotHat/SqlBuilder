@@ -50,8 +50,7 @@ class Grammar:
             return self.wrap(self.prefix + table, True)
         return table.get_value()
 
-    @staticmethod
-    def wrap_value(value):
+    def wrap_value(self, value):
         if value != '*':
             v = value.replace('"', '""')
             return f'"{v}"'
@@ -274,7 +273,7 @@ class Grammar:
     def compile_insert_or_ignore(self, query, values):
         pass
 
-    def compile_insert_get_id(self, query, values, sequence):
+    def compile_insert_get_id(self, query, values, sequence=None):
         return self.compile_insert(query, values)
 
     def compile_update(self, query: Builder, values):
@@ -306,7 +305,8 @@ class Grammar:
     def _compile_lock(self, query, value):
         return value if type(value) == str else ''
 
-
+    def compile_truncate(self, query):
+        return {'truncate' + self.wrap_table(query.from_) : []}
 
 
 

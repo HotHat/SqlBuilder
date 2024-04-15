@@ -98,19 +98,17 @@ class MysqlGrammar(Grammar):
         clean['select'] = []
         return bindings['join'] + flatten(clean)
 
-    @staticmethod
-    def wrap_value(value):
+    def wrap_value(self, value):
         if value == '*':
             return value
         if MysqlGrammar.is_json_selector(value):
-            return MysqlGrammar.wrap_json_selector(value)
+            return self.wrap_json_selector(value)
 
         return '`' + value.replace('`', '``') + '`'
 
-    @staticmethod
-    def wrap_json_selector(value):
+    def wrap_json_selector(self, value):
         path = value.split('->')
-        field = MysqlGrammar.wrap_value(path[0])
+        field = self.wrap_value(path[0])
         target = '.'.join(map(lambda x: f'"{x}"', path[1:]))
 
         return f'{field}->\'$.{target}\''
