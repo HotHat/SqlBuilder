@@ -2,6 +2,14 @@
 # sqlbuilder
 sqlbuilder provides a convenient, fluent interface to creating and running database queries.
 The `table` method returns a fluent query builder instance for the given table, allowing you to chain more constraints onto the query and then finally retrieve the results of the query using the `get` method
+
+## dependence
+```shell
+pip install mysql-connector-python
+pip install psycopg
+pip install "psycopg[binary]"
+```
+
 ## create connection
 ```python
 conn = MysqlConnection('table_prefix', 
