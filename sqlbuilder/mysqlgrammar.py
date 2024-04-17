@@ -93,7 +93,7 @@ class MysqlGrammar(Grammar):
             self._compile_delete_without_joins(query, table, where)
 
     def prepare_binding_for_delete(self, bindings):
-        clean = bindings
+        clean = dict(bindings)
         clean['join'] = []
         clean['select'] = []
         return bindings['join'] + flatten(clean)

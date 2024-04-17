@@ -616,6 +616,11 @@ class Builder:
                 target.append(dict(sorted(it.items())))
         return self.connection.insert(self.grammar.compile_insert(self, target), self._clean_bindings(flatten(target)))
 
+    def insert_get_id(self, values, sequence=None):
+        sql = self.grammar.compile_insert_get_id(self, values, sequence)
+        values = self._clean_bindings(flatten(values))
+        return self.connection.insert(sql, values)
+
     def update(self, values):
         sql = self.grammar.compile_update(self, values)
         return self.connection.update(sql, self.grammar.prepare_bindings_for_update(self.bindings, values))

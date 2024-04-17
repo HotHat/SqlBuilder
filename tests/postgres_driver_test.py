@@ -14,6 +14,9 @@ class PostgresSqlDriverTest(unittest.TestCase):
             password="123456",
             dbname='xapp'))
 
+    def __del__(self):
+        self.conn.close()
+
     def test_statement(self):
         # insert
         with self.conn.cursor(row_factory=dict_row) as cursor:
@@ -46,7 +49,13 @@ class PostgresSqlDriverTest(unittest.TestCase):
         pass
 
     def test_last_lowid(self):
-        pass
+        import re
+        sql = 'insert into users (username, password) values (%s, %s) returning id'
+        match = re.search(r'returning\s+(\w+)', sql.lower())
+        if match:
+            print(match.group(1))
+        else:
+            print('not match')
 
     def test_transaction(self):
         pass

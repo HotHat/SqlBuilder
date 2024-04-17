@@ -1,22 +1,28 @@
 import unittest
 from sqlbuilder.grammar import Grammar, Builder
-from sqlbuilder.mysqlgrammar import MysqlGrammar
+from sqlbuilder.postgresgrammar import PostgresGrammar
 from sqlbuilder.connection import Connection
+from sqlbuilder.driver import PostgresDriver
 from sqlbuilder.driver import MySqlDriver
 
 
-class BuilderTest(unittest.TestCase):
+class PgBuilderTest(unittest.TestCase):
     def setUp(self) -> None:
         # self.builder = Builder(None, Grammar('tb_'))
-        self.connection = Connection(None, '')
-        self.mysql_builder = Builder(self.connection, MysqlGrammar(''))
+        self.connection = Connection(PostgresDriver(host="127.0.0.1",
+                                                    port=5432,
+                                                    user="postgres",
+                                                    password="123456",
+                                                    dbname='xapp'), '')
+
+        self.builder = Builder(self.connection, PostgresGrammar(''))
 
     def test_hello2(self):
-        sql = self.mysql_builder.select('id', 'name').table('user').where('id', 3).to_sql()
+        sql = self.builder.select('id', 'name').table('user').where('id', 3).to_sql()
         print(sql)
 
     def test_where1(self):
-        sql = (self.mysql_builder.select('id', 'name')
+        sql = (self.builder.select('id', 'name')
                .table('user')
                .where('id', 3)
                .where('name', 'admin')
@@ -26,7 +32,7 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where2(self):
-        sql = (self.mysql_builder.table('users')
+        sql = (self.builder.table('users')
                .where('votes', '=', 100)
                .where('age', '>', 35)
                .where('votes', 100)
@@ -37,7 +43,7 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where3(self):
-        sql = (self.mysql_builder.table('users')
+        sql = (self.builder.table('users')
                .where([
             ['status', '=', '1'], ['subscribed', '<>', '1'],
         ])
@@ -45,7 +51,7 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_or_where1(self):
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                .where('votes', '>', 100)
                .or_where('name', 'John')
@@ -57,7 +63,7 @@ class BuilderTest(unittest.TestCase):
         def fn(query: Builder):
             query.where('name', 'Abigail').where('votes', '>', 50)
 
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                .where('votes', '>', 100)
                .or_where(fn)
@@ -66,7 +72,7 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where_in_null(self):
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                # where_in / where_not_in
                .where_in('id', [1, 2, 3])
@@ -79,9 +85,9 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where_in2(self):
-        nb = Builder(self.connection, MysqlGrammar(''))
+        nb = Builder(self.connection, PostgresGrammar(''))
         ids = nb.table('users').select('id')
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                # where_in / where_not_in
                .where_in('id', ids)
@@ -90,7 +96,7 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where_column(self):
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                # where_in / where_not_in
                .where_column('first_name', 'last_name')
@@ -107,7 +113,7 @@ class BuilderTest(unittest.TestCase):
         def fn(query: Builder):
             query.select(Builder.raw(1)).table('orders').where_raw('orders.user_id = users.id')
 
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                .where_exists(fn)
                .to_sql()
@@ -115,7 +121,7 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_ordering_grouping_limit_offset(self):
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                .order_by('name', 'desc')
                .group_by('account_id', 'status')
@@ -133,7 +139,7 @@ class BuilderTest(unittest.TestCase):
         def default(query, value):
             query.order_by('name')
 
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                .when(1, fn)
                .when(2, fn)
@@ -143,39 +149,40 @@ class BuilderTest(unittest.TestCase):
         print(sql)
 
     def test_insert(self):
-        (self.mysql_builder
-            .table('users')
-            .insert([
-                {'email': 'hothat@example.com', 'votes': 0},
-                {'email': 'hothat2@example.com', 'votes': 0},
-            ])
-        )
+        uid = (self.builder
+               .table('users')
+               .insert_get_id({'username': 'hothat@example.com', 'password': '123456'}))
+        print(uid)
+        self.connection.commit()
 
     def test_insert2(self):
-        (self.mysql_builder
+        (self.builder
             .table('users')
             .insert({'email': 'hothat@example.com', 'votes': 0}))
 
     def test_update(self):
-        (self.mysql_builder
-         .table('users')
-         .where('id', 1)
-         .update({'votes': 1}))
-        pass
+        rows = (self.builder
+                .table('users')
+                .where('id', 1)
+                .update({'votes': 1, 'password': 'abc'}))
+        print(rows)
+        self.connection.commit()
 
     def test_delete(self):
-        (self.mysql_builder
+        (self.builder
          .table('users')
+         .where('id', 18)
          .delete())
+        self.connection.commit()
 
     def test_delete2(self):
-        (self.mysql_builder
+        (self.builder
          .table('users')
          .where('votes', '>', 100)
          .delete())
 
     def test_join(self):
-        sql = (self.mysql_builder
+        sql = (self.builder
                .table('users')
                .select('users.id AS uid', 'roles.permission_id')
                .join('user_roles', 'user_roles.user_id', '=', 'users.id')

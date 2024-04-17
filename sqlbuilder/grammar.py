@@ -289,7 +289,7 @@ class Grammar:
         return f'update {table}{joins} set {columns} {wheres}'
 
     def prepare_bindings_for_update(self, bindings, values):
-        clean = bindings
+        clean = dict(bindings)
         clean['join'] = []
         clean['select'] = []
         return bindings['join'] + list(values.values()) + flatten(clean)

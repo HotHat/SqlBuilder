@@ -87,7 +87,7 @@ class PostgresGrammar(Grammar):
     def prepare_bindings_for_update(self, bindings, values):
         without_join = bindings
         without_join['join'] = []
-        return values + bindings['join'] + flatten(without_join)
+        return list(values.values()) + bindings['join'] + flatten(without_join)
 
     def _compile_delete_with_joins(self, query, table):
         using = ' USING' + ', '.join(list(map(lambda x: self.wrap(x.table), query.joins_)))
@@ -114,8 +114,8 @@ class PostgresGrammar(Grammar):
         return {'truncate ' + self.wrap_table(query.from_) + ' restart identity': []}
 
     def prepare_binding_for_delete(self, bindings):
-        clean = bindings
-        clean['join'] = []
+        clean = dict(bindings)
+        clean['where'] = []
         clean['select'] = []
         return bindings['where'] + flatten(clean)
 
