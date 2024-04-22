@@ -7,7 +7,7 @@ from sqlbuilder.driver import MySqlDriver
 
 class BuilderTest(unittest.TestCase):
     def setUp(self) -> None:
-        # self.builder = Builder(None, Grammar('tb_'))
+        # self.conn = Builder(None, Grammar('tb_'))
         self.connection = Connection(None, '')
         self.mysql_builder = Builder(self.connection, MysqlGrammar(''))
 

@@ -4,26 +4,28 @@ from sqlbuilder.postgresgrammar import PostgresGrammar
 from sqlbuilder.connection import Connection
 from sqlbuilder.driver import PostgresDriver
 from sqlbuilder.driver import MySqlDriver
+from sqlbuilder.postgresconnection import PostgresConnection
 
 
 class PgBuilderTest(unittest.TestCase):
     def setUp(self) -> None:
-        # self.builder = Builder(None, Grammar('tb_'))
-        self.connection = Connection(PostgresDriver(host="127.0.0.1",
+        # self.conn = Builder(None, Grammar('tb_'))
+        self.conn = PostgresConnection('prefix_schema', host="127.0.0.1",
                                                     port=5432,
                                                     user="postgres",
                                                     password="123456",
-                                                    dbname='xapp'), '')
+                                                    dbname='xapp')
 
-        self.builder = Builder(self.connection, PostgresGrammar(''))
+        # self.conn = Builder(self.connection, PostgresGrammar(''))
 
     def test_hello2(self):
-        sql = self.builder.select('id', 'name').table('user').where('id', 3).to_sql()
+        sql = self.conn.table('user').select('id', 'name').where('id', 3).to_sql()
         print(sql)
 
     def test_where1(self):
-        sql = (self.builder.select('id', 'name')
+        sql = (self.conn
                .table('user')
+               .select('id', 'name')
                .where('id', 3)
                .where('name', 'admin')
                .or_where('id', 4)
@@ -32,7 +34,7 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where2(self):
-        sql = (self.builder.table('users')
+        sql = (self.conn.table('users')
                .where('votes', '=', 100)
                .where('age', '>', 35)
                .where('votes', 100)
@@ -43,7 +45,7 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where3(self):
-        sql = (self.builder.table('users')
+        sql = (self.conn.table('users')
                .where([
             ['status', '=', '1'], ['subscribed', '<>', '1'],
         ])
@@ -51,7 +53,7 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_or_where1(self):
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                .where('votes', '>', 100)
                .or_where('name', 'John')
@@ -63,7 +65,7 @@ class PgBuilderTest(unittest.TestCase):
         def fn(query: Builder):
             query.where('name', 'Abigail').where('votes', '>', 50)
 
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                .where('votes', '>', 100)
                .or_where(fn)
@@ -72,7 +74,7 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where_in_null(self):
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                # where_in / where_not_in
                .where_in('id', [1, 2, 3])
@@ -85,9 +87,10 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where_in2(self):
-        nb = Builder(self.connection, PostgresGrammar(''))
+        # nb = Builder(self.connection, PostgresGrammar(''))
+        nb = self.conn.new_query()
         ids = nb.table('users').select('id')
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                # where_in / where_not_in
                .where_in('id', ids)
@@ -96,7 +99,7 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_where_column(self):
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                # where_in / where_not_in
                .where_column('first_name', 'last_name')
@@ -113,7 +116,7 @@ class PgBuilderTest(unittest.TestCase):
         def fn(query: Builder):
             query.select(Builder.raw(1)).table('orders').where_raw('orders.user_id = users.id')
 
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                .where_exists(fn)
                .to_sql()
@@ -121,7 +124,7 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_ordering_grouping_limit_offset(self):
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                .order_by('name', 'desc')
                .group_by('account_id', 'status')
@@ -139,7 +142,7 @@ class PgBuilderTest(unittest.TestCase):
         def default(query, value):
             query.order_by('name')
 
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                .when(1, fn)
                .when(2, fn)
@@ -149,40 +152,40 @@ class PgBuilderTest(unittest.TestCase):
         print(sql)
 
     def test_insert(self):
-        uid = (self.builder
+        uid = (self.conn
                .table('users')
                .insert_get_id({'username': 'hothat@example.com', 'password': '123456'}))
         print(uid)
-        self.connection.commit()
+        self.conn.commit()
 
     def test_insert2(self):
-        (self.builder
+        (self.conn
             .table('users')
             .insert({'email': 'hothat@example.com', 'votes': 0}))
 
     def test_update(self):
-        rows = (self.builder
+        rows = (self.conn
                 .table('users')
                 .where('id', 1)
                 .update({'votes': 1, 'password': 'abc'}))
         print(rows)
-        self.connection.commit()
+        self.conn.commit()
 
     def test_delete(self):
-        (self.builder
+        (self.conn
          .table('users')
          .where('id', 18)
          .delete())
-        self.connection.commit()
+        self.conn.commit()
 
     def test_delete2(self):
-        (self.builder
+        (self.conn
          .table('users')
          .where('votes', '>', 100)
          .delete())
 
     def test_join(self):
-        sql = (self.builder
+        sql = (self.conn
                .table('users')
                .select('users.id AS uid', 'roles.permission_id')
                .join('user_roles', 'user_roles.user_id', '=', 'users.id')
